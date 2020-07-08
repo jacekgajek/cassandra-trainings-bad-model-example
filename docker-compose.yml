@@ -1,0 +1,55 @@
+version: '2'
+services:
+  cassandra:
+    container_name: cassandra-node
+    image: cassandra:3.11.1
+    restart: always
+    ports:
+      - "9042:9042"
+
+  init-schema:
+    container_name: cassandra-init-schema
+    image: cassandra-init-schema
+    restart: on-failure
+    build:
+      context: ./script
+      dockerfile: ./Dockerfile-init-schema
+#      KISS & just sleep
+    command: /bin/bash -c "echo Waiting for cassandra... && sleep 45 && echo init schema && cqlsh cassandra -f /schema.overload.cql"
+
+  data-generator:
+    container_name: data-generator
+    image: data-generator
+    restart: on-failure
+    build:
+      context: .
+    command: /bin/bash -c "echo Waiting for cassandra and schema... && sleep 50 && echo running APP && java -jar /app.jar cassandra overload"
+    links:
+      - cassandra
+
+  stress-page-view:
+    container_name: stress-page-view
+    image: stress-page-view
+    restart: on-failure
+    build:
+      context: ./script
+      dockerfile: ./Dockerfile-stress-page-views
+    command: /bin/bash -c "echo Waiting for cassandra and schema... && sleep 50 && echo stress-page-views && cassandra-stress \"user profile=file:///stress-page-views.yml ops(insert=1, single=1, full-row=1) n=1000000000\" -node cassandra"
+
+  stress-pages:
+    container_name: stress-pages
+    image: stress-pages
+    restart: on-failure
+    build:
+      context: ./script
+      dockerfile: ./Dockerfile-stress-pages
+    command: /bin/bash -c "echo Waiting for cassandra and schema... && sleep 50 && echo stress-pages && cassandra-stress \"user profile=file:///stress-pages.yml ops(insert=1, single=1, full-row=1) n=1000000000\" -node cassandra"
+
+  stress-urls:
+    container_name: stress-urls
+    image: stress-urls
+    restart: on-failure
+    build:
+      context: ./script
+      dockerfile: ./Dockerfile-stress-urls
+    command: /bin/bash -c "echo Waiting for cassandra and schema... && sleep 50 && echo stress-urls && cassandra-stress \"user profile=file:///stress-urls.yml ops(insert=1, full-row=1) n=1000000000\" -node cassandra"

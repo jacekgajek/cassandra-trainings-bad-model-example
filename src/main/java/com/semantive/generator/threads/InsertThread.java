@@ -11,8 +11,6 @@ import com.semantive.generator.model.UrlSimilarityScore;
 import java.util.HashSet;
 import java.util.Set;
 
-import static sun.misc.Version.println;
-
 public class InsertThread extends CassandraThread {
 
     public InsertThread(final Session session) {
